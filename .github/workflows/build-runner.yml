@@ -26,10 +26,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: gh-action-tst
+          - name: gh-actions-runner
             dockerfile: Dockerfile
-          # - name: actions-runner-dind
-          #   dockerfile: dindrunner.Dockerfile
+          - name: gh-actions-runner-dind
+            dockerfile: dindrunner.Dockerfile
     env:
       DOCKER_VERSION: 19.03.12
     steps:
