@@ -85,7 +85,7 @@ jobs:
             -t "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}" \
             -t "${ECR_REGISTRY}/${{ matrix.name }}:latest" \
             --build-arg RUNNER_VERSION=${RUNNER_VERSION} \
-            --build-arg TARGETPLATFORM="linux/amd64,linux/arm64"
+            --build-arg TARGETPLATFORM="linux/amd64,linux/arm64" \
             -f ${{ matrix.dockerfile }} \
             .
           docker push "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}"
