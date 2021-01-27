@@ -22,14 +22,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: actions-runner
+          - name: gh-action-tst
             dockerfile: Dockerfile
-          - name: actions-runner-dind
-            dockerfile: dindrunner.Dockerfile
+          # - name: actions-runner-dind
+          #   dockerfile: dindrunner.Dockerfile
     env:
-      RUNNER_VERSION: 2.275.1
       DOCKER_VERSION: 19.03.12
-      DOCKERHUB_USERNAME: ${{ github.repository_owner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -42,23 +40,52 @@ jobs:
         with:
           version: latest
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        if: ${{ github.event_name == 'push' }}
-        with:
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+      # - name: Login to DockerHub
+      #   uses: docker/login-action@v1
+      #   if: ${{ github.event_name == 'push' }}
+      #   with:
+      #     username: ${{ github.repository_owner }}
+      #     password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
-      - name: Build [and Push]
-        uses: docker/build-push-action@v2
+      # - name: Build [and Push]
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     context: ./runner
+      #     file: ./runner/${{ matrix.dockerfile }}
+      #     platforms: linux/amd64,linux/arm64
+      #     push: ${{ github.event_name != 'pull_request' }}
+      #     build-args: |
+      #       RUNNER_VERSION=${{ env.RUNNER_VERSION }}
+      #       DOCKER_VERSION=${{ env.DOCKER_VERSION }}
+      #     tags: |
+      #       ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.name }}:v${{ env.RUNNER_VERSION }}
+      #       ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.name }}:latest
+
+      - name: Latest GH Action Runner version
+        run: |
+          echo RUNNER_VERSION=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/actions/runner/releases/latest | awk -F '"' '/tag_name/{print $4}' | cut -c 2- ) >> $GITHUB_ENV
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          context: ./runner
-          file: ./runner/${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          build-args: |
-            RUNNER_VERSION=${{ env.RUNNER_VERSION }}
-            DOCKER_VERSION=${{ env.DOCKER_VERSION }}
-          tags: |
-            ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.name }}:v${{ env.RUNNER_VERSION }}
-            ${{ env.DOCKERHUB_USERNAME }}/${{ matrix.name }}:latest
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build, tag, and push image to Amazon ECR
+        run: |
+          docker build \
+            -t "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}" \
+            -t "${ECR_REGISTRY}/${{ matrix.name }}:latest" \
+            --build-arg RUNNER_VERSION=${RUNNER_VERSION}
+            -f Dockerfile \
+            .
+          docker push "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}"
+          docker push "${ECR_REGISTRY}/${{ matrix.name }}:latest"
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      - name: Logout of Amazon ECR
+        if: always()
+        run: |
+          docker logout ${{ steps.login-ecr.outputs.registry }}
