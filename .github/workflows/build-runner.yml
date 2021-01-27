@@ -80,7 +80,7 @@ jobs:
             -t "${ECR_REGISTRY}/${{ matrix.name }}:latest" \
             --build-arg RUNNER_VERSION=${RUNNER_VERSION} \
             -f Dockerfile \
-            .
+            ./runner/${{ matrix.dockerfile }}
           docker push "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}"
           docker push "${ECR_REGISTRY}/${{ matrix.name }}:latest"
         env:
@@ -89,4 +89,3 @@ jobs:
         if: always()
         run: |
           docker logout ${{ steps.login-ecr.outputs.registry }}
-
