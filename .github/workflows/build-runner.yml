@@ -78,7 +78,7 @@ jobs:
           docker build \
             -t "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}" \
             -t "${ECR_REGISTRY}/${{ matrix.name }}:latest" \
-            --build-arg RUNNER_VERSION=${RUNNER_VERSION}
+            --build-arg RUNNER_VERSION=${RUNNER_VERSION} \
             -f Dockerfile \
             .
           docker push "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}"
