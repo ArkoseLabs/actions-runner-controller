@@ -19,6 +19,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: Build ${{ matrix.name }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: actions-runner-controller/runner
     strategy:
       matrix:
         include:
@@ -31,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          path: actions-runner-controller
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -79,7 +85,7 @@ jobs:
             -t "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}" \
             -t "${ECR_REGISTRY}/${{ matrix.name }}:latest" \
             --build-arg RUNNER_VERSION=${RUNNER_VERSION} \
-            -f runner/${{ matrix.dockerfile }} \
+            -f ${{ matrix.dockerfile }} \
             .
           docker push "${ECR_REGISTRY}/${{ matrix.name }}:${RUNNER_VERSION}"
           docker push "${ECR_REGISTRY}/${{ matrix.name }}:latest"
